@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TVmaze Series Explorer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main>
+    <h1>TVmaze Series Explorer</h1>
+
+    <form method="get" action="/">
+      <input type="text" name="q" value="{{ query }}" placeholder="e.g. The Big Bang Theory" autofocus>
+      <button type="submit">Search</button>
+    </form>
+
+    {% if error %}
+      <p class="error">{{ error }}</p>
+    {% endif %}
+
+    {% if calls %}
+      <section class="calls">
+        <h2>API endpoints used</h2>
+        <ol>
+          {% for call in calls %}
+            <li><code>{{ call.endpoint }}</code> &ndash; {{ call.why }}</li>
+          {% endfor %}
+        </ol>
+      </section>
+    {% endif %}
+
+    {% if show %}
+      <h2>{{ show.name }} <small>(ID {{ show.id }}, {{ total }} episodes)</small></h2>
+      {% for season, episodes in seasons.items() %}
+        <section class="season">
+          <h3>Season {{ season }} <small>({{ episodes|length }} episodes)</small></h3>
+          <ul>
+            {% for ep in episodes %}
+              <li>Episode {{ ep.number if ep.number is not none else "Special" }}: {{ ep.name }}</li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endfor %}
+      {% if not seasons %}
+        <p>This show has no episodes listed.</p>
+      {% endif %}
+    {% endif %}
+  </main>
+</body>
+</html>
