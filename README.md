@@ -1,39 +1,36 @@
 # TV Maze Series Application
 
-A small Python app that teaches how REST APIs work, using the free [TVmaze API](https://www.tvmaze.com/api). Enter a TV show name and see all its episodes grouped by season. It works in the browser (Flask, `http://localhost:5000`) or in the terminal.
+A TV show discovery website built with Flask and the free [TVmaze API](https://www.tvmaze.com/api). Search for shows or actors and see ratings, cast, episodes by season and similar shows, in a modern dark interface. It also teaches how REST APIs work: every feature below is built from real API responses.
 
-## What is implemented so far
+## Features
 
-- Local web interface (Flask) with a search box, at `http://localhost:5000`
-- Terminal version (`main.py`) using `input()`
-- Show search via the TVmaze API, then episode retrieval using the show ID from the search
-- Episodes grouped by season with episode numbers and titles
-- A box showing which API endpoints were called and why
-- Error handling: empty input, show not found, no connection, timeout, HTTP errors, invalid JSON
-- Shared API code in `tvmaze.py`, used by both interfaces
+- **Dark, responsive UI** (IMDb/Netflix style): sticky navigation with search bar, poster cards with hover effects, works on phones.
+- **Home page** with the top rated shows.
+- **Show search**: results as poster cards with rating and year.
+- **Show page**: poster, genres, status, runtime, network, description.
+- **Ratings**: the TVmaze rating (`rating.average`) is shown prominently. TVmaze does not provide IMDb scores, only IMDb IDs, so the page shows a link to the show's IMDb page when an ID exists. Missing ratings show "Not available". No scraping, no other rating source, no API keys.
+- **Cast**: main cast with actor photo, name and character. Each actor is clickable.
+- **Actor pages**: an actor's other TV shows (newest first), each clickable.
+- **Actor search**: choose "Actors" in the search bar to find actors and see their TV credits.
+- **Episodes**: grouped by season in collapsible sections (`<details>`), with episode number, title and air date. Specials are labelled "Special".
+- **You Might Also Like**: shows that share genres with the current show, with posters and ratings (see below).
+- **Error handling**: empty search, nothing found, unknown show/person (404 page), connection errors, timeouts, HTTP errors, missing images (placeholder), missing ratings, missing cast. If cast or recommendations fail, the rest of the page still loads.
+- **Terminal version** (`main.py`) that still prints episodes by season.
+
+## Technologies
+
+Python 3, [Flask](https://flask.palletsprojects.com/), [requests](https://requests.readthedocs.io/), HTML (Jinja2 templates), CSS. No JavaScript is needed. No database. Responses are cached in memory with `functools.lru_cache` to avoid repeated calls.
 
 ## Project structure
 
 | File | Purpose |
 |---|---|
-| `tvmaze.py` | All TVmaze API logic (`search_show`, `get_episodes`, `group_by_season`, error handling) |
-| `app.py` | Flask web app (one route, `/`) |
-| `templates/index.html` | The HTML page (search form, endpoints box, episodes) |
-| `static/style.css` | Basic CSS |
+| `tvmaze.py` | All TVmaze API logic and error handling (shared by web and terminal) |
+| `app.py` | Flask routes: `/`, `/search`, `/show/<id>`, `/person/<id>` |
+| `templates/` | `base.html` (layout), `_macros.html` (cards), `home.html`, `search.html`, `show.html`, `person.html`, `error.html` |
+| `static/style.css` | Dark theme and responsive layout |
 | `main.py` | Terminal version |
 | `requirements.txt` | Dependencies: `requests`, `flask` |
-
-## How it works (step by step)
-
-1. You type a show name in the search box and press **Search**. The browser requests `/?q=<name>` from the Flask app.
-2. Empty input is rejected with a message.
-3. `app.py` calls `search_show()`, which sends `GET /search/shows?q=<name>` to TVmaze. The response is a list of matches sorted by relevance.
-4. The first match is used and its `id` is read.
-5. `app.py` calls `get_episodes(id)`, which sends `GET /shows/<id>/episodes`.
-6. `group_by_season()` groups the episodes by their `season` field.
-7. The template shows the endpoints used, then each season with its episode numbers and titles. Specials without an episode number are labelled "Special".
-
-If any API call fails, `tvmaze.py` raises a `TVmazeError` with a friendly message and the page shows it instead of crashing.
 
 ## API endpoints used
 
@@ -41,12 +38,38 @@ Base URL: `https://api.tvmaze.com`
 
 | Endpoint | Why we need it |
 |---|---|
-| `GET /search/shows?q=<name>` | Turns a name typed by a human into a show object, including its unique numeric `id`. |
-| `GET /shows/<id>/episodes` | Returns every episode of one show (season, number, title, ...). |
+| `GET /search/shows?q=<name>` | Turns a name typed by a human into a list of matching shows, each with a unique numeric `id`. |
+| `GET /shows/<id>` | Full details of one show: poster, genres, `rating.average`, status, summary and `externals.imdb` (the IMDb ID used for the IMDb link). |
+| `GET /shows/<id>/episodes` | Every episode of one show (season, number, title, air date). |
+| `GET /shows/<id>/cast` | The actors of a show and the characters they play, including each actor's `person.id`. |
+| `GET /search/people?q=<name>` | Turns an actor name into a list of matching people, each with a unique `id`. |
+| `GET /people/<id>` | Details of one person (photo, birthday, country). |
+| `GET /people/<id>/castcredits?embed=show` | The shows a person acted in. `embed=show` includes the full show data (poster, rating) in the same response, so no extra request per show is needed. |
+| `GET /shows?page=<n>` | One page of 250 shows from the TVmaze index (genres and rating included). Used for the home page and for recommendations. |
 
-### How the show ID connects the two requests
+### How IDs connect the requests
 
-The episodes endpoint cannot take a name, only an ID. The first request returns `{"show": {"id": 66, "name": "The Big Bang Theory", ...}}`. The app reads `show["id"]` (66) and puts it into the URL of the second request: `/shows/66/episodes`. The output of request 1 is the input of request 2.
+The endpoints cannot take names, only IDs, so one request provides the ID for the next one.
+
+**Show ID**
+1. `/search/shows?q=The Big Bang Theory` returns the show with `id` 66.
+2. The app uses 66 in `/shows/66` (details), `/shows/66/episodes` (episodes) and `/shows/66/cast` (cast). The page URL is `/show/66` as well, so every show page is addressable by its ID.
+
+**Person ID**
+1. `/shows/66/cast` (or `/search/people?q=...`) returns each actor with a `person.id`, e.g. 4 for Johnny Galecki.
+2. The app uses it in `/people/4` and `/people/4/castcredits?embed=show` to list the actor's other shows.
+3. Each of those shows has its own `id`, which leads back to a show page. Shows and people link into each other this way.
+
+### How "You Might Also Like" works
+
+TVmaze has no "similar shows" endpoint, so recommendations are based on **genre similarity**:
+
+1. Read the `genres` of the current show (from `/shows/<id>`).
+2. Download one index page, `/shows?page=<id // 250>`, which is the page of 250 shows containing the current show. The whole catalogue (tens of thousands of shows) is never downloaded.
+3. Keep the shows that share at least one genre, excluding the current show itself.
+4. Rank them by number of shared genres, then by TVmaze rating, and show the best 6. The shared genres are shown on each card.
+
+Because only one page is used, recommendations come from shows with nearby IDs (roughly the same period of TVmaze's catalogue). This is a deliberate trade-off for speed.
 
 ## Installation and execution
 
@@ -56,62 +79,23 @@ Requires Python 3. From the project folder (Windows PowerShell):
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-Run the web interface and open <http://localhost:5000>:
-
-```powershell
 python app.py
 ```
 
-Or run the terminal version:
+Then open <http://localhost:5000> in your browser. Stop the server with `Ctrl+C`.
 
-```powershell
-python main.py
-```
-
-Stop the web server with `Ctrl+C`.
+Terminal version: `python main.py`
 
 ### VS Code: "Import requests could not be resolved"
 
-This warning means VS Code is using a different Python than the one where the packages are installed. Fix:
-
-1. Create the virtual environment and install the requirements (above).
-2. Press `Ctrl+Shift+P` -> **Python: Select Interpreter**.
-3. Choose `.venv` (`.\.venv\Scripts\python.exe`). If it is not listed, choose **Enter interpreter path...** and browse to that file.
-4. If the warning remains, run **Developer: Reload Window**.
-
-## Example
-
-Open <http://localhost:5000>, type `The Big Bang Theory` and click Search. The page shows:
-
-```
-API endpoints used
-1. GET /search/shows?q=The Big Bang Theory - Turns the name you typed into a show, including its unique ID.
-2. GET /shows/66/episodes - Uses the ID 66 from the first call to load all episodes.
-
-The Big Bang Theory (ID 66, 279 episodes)
-
-Season 1 (17 episodes)
-  Episode 1: Pilot
-  Episode 2: The Big Bran Hypothesis
-  ...
-```
-
-Searching for a name that does not exist (e.g. `xqzzyxqwv`) shows: `No show found for 'xqzzyxqwv'. Try another name.`
-
-## Possible future features
-
-- Let the user pick from several search matches instead of the first one
-- Show details (rating, genres, summary, poster) from `GET /shows/<id>`
-- Show cast via `GET /shows/<id>/cast`
-- Episode air dates and per-season statistics
+VS Code is using a different Python than the one with the packages. Press `Ctrl+Shift+P` -> **Python: Select Interpreter** -> choose `.\.venv\Scripts\python.exe`, then run **Developer: Reload Window** if needed. The project's `.vscode/settings.json` already points to `.venv`.
 
 ## Development Progress
 
 | Version | What was added |
 |---|---|
-| v0.1 | Terminal app: `/search/shows` and `/shows/{id}/episodes`, season grouping, endpoint explanation, error handling. |
-| v0.2 | Fixed the VS Code `requests` import warning (project `.venv`, interpreter instructions). Moved API logic into `tvmaze.py`. Added Flask web interface at `localhost:5000` (HTML + CSS, no JavaScript). Added `flask` to `requirements.txt`. |
+| v0.1 | Terminal app: `/search/shows` and `/shows/{id}/episodes`, season grouping, error handling. |
+| v0.2 | Fixed the VS Code `requests` import warning (project `.venv`). Moved API logic into `tvmaze.py`. First Flask web interface at `localhost:5000`. |
+| v0.3 | Modern dark UI with posters and responsive cards. Show details and ratings (TVmaze rating, IMDb link). Cast with actor photos and clickable actors. Actor pages and actor search (`/search/people`, `/people/{id}/castcredits`). Collapsible episodes per season. "You Might Also Like" recommendations by genre. Removed API explanations from the website (documented here instead). Response caching. |
 
 > Maintenance rule: update this README (features, endpoints, progress table) whenever functionality is added.

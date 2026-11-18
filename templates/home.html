@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_macros.html" import show_card %}
+{% block content %}
+  <section class="hero">
+    <h1>Discover TV shows and the people behind them</h1>
+    <p class="muted">Search for a show or an actor to see ratings, cast, episodes and similar shows.</p>
+  </section>
+
+  {% if shows %}
+    <h2>Top rated shows</h2>
+    <div class="grid">
+      {% for show in shows %}{{ show_card(show) }}{% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}

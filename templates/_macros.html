@@ -1,0 +1,20 @@
+{# Reusable cards #}
+{% macro poster(image, alt) -%}
+  {% if image %}<img src="{{ image.medium }}" alt="{{ alt }}" loading="lazy">
+  {% else %}<div class="no-image">No image</div>{% endif %}
+{%- endmacro %}
+
+{% macro rating(show) -%}
+  {% if show.rating and show.rating.average %}★ {{ show.rating.average }}{% else %}Not available{% endif %}
+{%- endmacro %}
+
+{% macro show_card(show, note=None) -%}
+  <a class="card" href="{{ url_for('show_detail', show_id=show.id) }}">
+    {{ poster(show.image, show.name) }}
+    <div class="card-body">
+      <strong>{{ show.name }}</strong>
+      <span class="muted">{{ rating(show) }}{% if show.premiered %} · {{ show.premiered[:4] }}{% endif %}</span>
+      {% if note %}<span class="tag">{{ note }}</span>{% endif %}
+    </div>
+  </a>
+{%- endmacro %}

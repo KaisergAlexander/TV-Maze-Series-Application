@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "_macros.html" import show_card, poster %}
+{% block title %}{{ query }} - TVmaze Explorer{% endblock %}
+{% block content %}
+  {% if kind == 'show' %}
+    <h2>Shows matching "{{ query }}"</h2>
+    {% if shows %}
+      <div class="grid">
+        {% for show in shows %}{{ show_card(show) }}{% endfor %}
+      </div>
+    {% else %}
+      <p class="notice">No shows found for "{{ query }}". Try another name.</p>
+    {% endif %}
+  {% else %}
+    <h2>Actors matching "{{ query }}"</h2>
+    {% if people %}
+      {% for person in people %}
+        <section class="panel">
+          <a class="person-row" href="{{ url_for('person_detail', person_id=person.id) }}">
+            {{ poster(person.image, person.name) }}
+            <strong>{{ person.name }}</strong>
+          </a>
+          {% if person.id in credits %}
+            <p class="muted">Known for:</p>
+            <div class="grid small">
+              {% for show in credits[person.id] %}{{ show_card(show) }}{% endfor %}
+            </div>
+          {% endif %}
+        </section>
+      {% endfor %}
+    {% else %}
+      <p class="notice">No actors found for "{{ query }}". Try another name.</p>
+    {% endif %}
+  {% endif %}
+{% endblock %}

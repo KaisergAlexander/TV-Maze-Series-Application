@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TVmaze Explorer{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="nav">
+    <a class="logo" href="{{ url_for('home') }}">TV<span>Explorer</span></a>
+    <form class="search" action="{{ url_for('search') }}" method="get">
+      <select name="type" aria-label="Search for">
+        <option value="show" {{ 'selected' if kind != 'actor' }}>Shows</option>
+        <option value="actor" {{ 'selected' if kind == 'actor' }}>Actors</option>
+      </select>
+      <input type="text" name="q" value="{{ query or '' }}" placeholder="Search shows or actors..." required>
+      <button type="submit">Search</button>
+    </form>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>Data provided by <a href="https://www.tvmaze.com/api" target="_blank" rel="noopener">TVmaze</a></footer>
+</body>
+</html>

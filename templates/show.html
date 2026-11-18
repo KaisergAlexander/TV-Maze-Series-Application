@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_macros.html" import show_card, poster, rating %}
+{% block title %}{{ show.name }} - TVmaze Explorer{% endblock %}
+{% block content %}
+  <section class="detail">
+    <div class="detail-poster">{{ poster(show.image, show.name) }}</div>
+    <div>
+      <h1>{{ show.name }}{% if show.premiered %} <span class="muted">({{ show.premiered[:4] }})</span>{% endif %}</h1>
+      <p>
+        {% for genre in show.genres %}<span class="tag">{{ genre }}</span>{% endfor %}
+      </p>
+      <p class="facts muted">
+        {% if show.status %}{{ show.status }}{% endif %}
+        {% if show.runtime or show.averageRuntime %} · {{ show.runtime or show.averageRuntime }} min{% endif %}
+        {% if show.language %} · {{ show.language }}{% endif %}
+        {% if show.network %} · {{ show.network.name }}{% elif show.webChannel %} · {{ show.webChannel.name }}{% endif %}
+      </p>
+
+      <div class="ratings">
+        <div class="rating-box">
+          <span class="rating-label">TVmaze rating</span>
+          <span class="rating-value">{{ rating(show) }}</span>
+        </div>
+        <div class="rating-box">
+          <span class="rating-label">IMDb</span>
+          {% if show.externals and show.externals.imdb %}
+            <a class="rating-value link" href="https://www.imdb.com/title/{{ show.externals.imdb }}/" target="_blank" rel="noopener">View on IMDb ↗</a>
+          {% else %}
+            <span class="rating-value">Not available</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <p class="summary">{{ summary or "No description available." }}</p>
+    </div>
+  </section>
+
+  <h2>Cast</h2>
+  {% if cast %}
+    <div class="grid small">
+      {% for entry in cast %}
+        <a class="card" href="{{ url_for('person_detail', person_id=entry.person.id) }}">
+          {{ poster(entry.person.image, entry.person.name) }}
+          <div class="card-body">
+            <strong>{{ entry.person.name }}</strong>
+            <span class="muted">as {{ entry.character.name }}</span>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="notice">Cast information is not available.</p>
+  {% endif %}
+
+  <h2>Episodes <span class="muted">({{ total }})</span></h2>
+  {% for season, episodes in seasons.items() %}
+    <details class="season" {{ 'open' if loop.first }}>
+      <summary>Season {{ season }} <span class="muted">· {{ episodes|length }} episodes</span></summary>
+      <ul>
+        {% for ep in episodes %}
+          <li>
+            <span class="ep-num">{{ ep.number if ep.number is not none else "Special" }}</span>
+            <span>{{ ep.name }}</span>
+            <span class="muted ep-date">{{ ep.airdate or "" }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+  {% else %}
+    <p class="notice">No episodes listed.</p>
+  {% endfor %}
+
+  <h2>You Might Also Like</h2>
+  {% if related %}
+    <p class="muted">Shows that share genres with {{ show.name }}.</p>
+    <div class="grid">
+      {% for other in related %}{{ show_card(other, other.shared_genres|join(', ')) }}{% endfor %}
+    </div>
+  {% else %}
+    <p class="notice">No similar shows found.</p>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_macros.html" import show_card, poster %}
+{% block title %}{{ person.name }} - TVmaze Explorer{% endblock %}
+{% block content %}
+  <section class="detail">
+    <div class="detail-poster">{{ poster(person.image, person.name) }}</div>
+    <div>
+      <h1>{{ person.name }}</h1>
+      <p class="facts muted">
+        {% if person.birthday %}Born {{ person.birthday }}{% endif %}
+        {% if person.country %} · {{ person.country.name }}{% endif %}
+      </p>
+    </div>
+  </section>
+
+  <h2>TV shows</h2>
+  {% if shows %}
+    <div class="grid">
+      {% for show in shows %}{{ show_card(show) }}{% endfor %}
+    </div>
+  {% else %}
+    <p class="notice">No TV show credits found for {{ person.name }}.</p>
+  {% endif %}
+{% endblock %}
